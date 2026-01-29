@@ -16,6 +16,18 @@ async function run() {
      try {
           await client.connect();
 
+          const db = client.db("B4_Style");
+          const productsCollection = db.collection("products");
+
+          app.get("/", async (req, res) => {
+               res.send("B4 Style Backend is running 🚀");
+          });
+
+          app.get("/api/products", async (req, res) => {
+               const products = await productsCollection.find().toArray();
+               res.send(products);
+          });
+
           await client.db("admin").command({ ping: 1 });
           console.log("Pinged your deployment. You successfully connected to MongoDB!");
      } finally {
@@ -23,14 +35,6 @@ async function run() {
      }
 }
 run().catch(console.dir);
-
-app.get("/", (req, res) => {
-     res.send("B4 Style Backend is running 🚀");
-});
-
-app.get("/api/products", (req, res) => {
-     res.json(products);
-});
 
 app.listen(port, () => {
      console.log(`Server running on ${port}`);
