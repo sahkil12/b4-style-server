@@ -24,7 +24,18 @@ async function run() {
           });
 
           app.get("/products", async (req, res) => {
-               const products = await productsCollection.find().toArray();
+               const query = {};
+               
+               if (req.query.isNew) {
+                    query.isNew = req.query.isNew === "true"
+               }
+               if (req.query.isBestSeller) {
+                    query.isBestSeller = req.query.isBestSeller === "true"
+               }
+               if (req.query.category) {
+                    query.category = req.query.category;
+               }
+               const products = await productsCollection.find(query).toArray();
                res.send(products);
           });
           // ping test
