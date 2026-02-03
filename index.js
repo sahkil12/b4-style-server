@@ -23,7 +23,7 @@ async function run() {
                res.send("B4 Style Backend is running 🚀");
           });
 
-          app.get("/api/products", async (req, res) => {
+          app.get("/products", async (req, res) => {
                const products = await productsCollection.find().toArray();
                res.send(products);
           });
