@@ -23,19 +23,48 @@ async function run() {
           });
           // get products 
           app.get("/products", async (req, res) => {
-               const query = {};
+               try {
+                    const query = {};
+                    const {
+                         category,
+                         size,
+                         search,
+                         sort = "newest",
+                         isNew,
+                         isBestSeller
+                    } = req.query;
 
-               if (req.query.isNew) {
-                    query.isNew = req.query.isNew === "true"
+                    // Category
+                    if (category) query.category = category;
+                    // Size
+                    if (size) {
+                         query.sizes = size;
+                    }
+                    // Search (title)
+                    if (search) {
+                         query.title = { $regex: search, $options: "i" };
+                    }
+                    if (isNew) {
+                         query.isNew = isNew === "true";
+                    }
+                    if (isBestSeller) {
+                         query.isBestSeller = isBestSeller === "true";
+                    }
+                    // sort
+                    let sortQuery = { createdAt: -1 };
+                    if (sort === "priceLow") {
+                         sortQuery = { price: 1 }
+                    };
+                    if (sort === "priceHigh") {
+                         sortQuery = { price: -1 }
+                    };
+                    const products = await productsCollection.find(query).sort(sortQuery).toArray()
+                    res.send(products);
                }
-               if (req.query.isBestSeller) {
-                    query.isBestSeller = req.query.isBestSeller === "true"
+               catch (err) {
+                    console.log(err);
+                    res.status(500).send({ message: "Failed to fetch products" });
                }
-               if (req.query.category) {
-                    query.category = req.query.category;
-               }
-               const products = await productsCollection.find(query).toArray();
-               res.send(products);
           });
           //get product with id
           app.get("/products/:id", async (req, res) => {
