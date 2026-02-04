@@ -42,7 +42,10 @@ async function run() {
                     }
                     // Search (title)
                     if (search) {
-                         query.title = { $regex: search, $options: "i" };
+                         query.$or = [
+                              { title: { $regex: search, $options: "i" } },
+                              { category: { $regex: search, $options: "i" } },
+                         ]
                     }
                     if (isNew) {
                          query.isNew = isNew === "true";
@@ -58,7 +61,11 @@ async function run() {
                     if (sort === "priceHigh") {
                          sortQuery = { price: -1 }
                     };
-                    const products = await productsCollection.find(query).sort(sortQuery).toArray()
+                    const products = await productsCollection
+                         .find(query)
+                         .sort(sortQuery)
+                         .limit(search ? 16 : 0)
+                         .toArray()
                     res.send(products);
                }
                catch (err) {
