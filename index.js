@@ -17,6 +17,8 @@ async function run() {
           await client.connect();
           const db = client.db("B4_Style");
           const productsCollection = db.collection("products");
+          const cartsCollection = db.collection("carts")
+          const wishlistsCollection = db.collection("wishlists")
 
           app.get("/", async (req, res) => {
                res.send("B4 Style Backend is running 🚀");
@@ -81,6 +83,28 @@ async function run() {
 
                res.send(product)
           })
+          // add to cart
+          app.post("/cart", async (req, res) => {
+               const { userId, productId, quantity, size } = req.body
+              
+               const existing = await cartsCollection.findOne({ userId, productId, size });
+               if (existing) {
+                    await cartsCollection.updateOne({ _id: existing._id }, { $inc: { quantity } })
+               }
+               else {
+                    await cartsCollection.insertOne({ userId, productId, quantity, size });
+               }
+               res.send({ message: "Added To Cart" })
+          })
+          // Wishlist add
+          app.post("/wishlist", async (req, res) => {
+               const { userId, productId } = req.body;
+               const exists = await wishlistsCollection.findOne({ userId, productId });
+               if (!exists) {
+                    await wishlistsCollection.insertOne({ userId, productId });
+               }
+               res.send({ message: "Added to wishlist" });
+          });
           // ping test
           await client.db("admin").command({ ping: 1 });
           console.log("Ping success 🚀");
