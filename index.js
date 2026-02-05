@@ -86,7 +86,7 @@ async function run() {
           // add to cart
           app.post("/cart", async (req, res) => {
                const { userId, productId, quantity, size } = req.body
-              
+
                const existing = await cartsCollection.findOne({ userId, productId, size });
                if (existing) {
                     await cartsCollection.updateOne({ _id: existing._id }, { $inc: { quantity } })
@@ -100,10 +100,36 @@ async function run() {
           app.post("/wishlist", async (req, res) => {
                const { userId, productId } = req.body;
                const exists = await wishlistsCollection.findOne({ userId, productId });
+               if (exists) {
+                    return res.send({ message: "Already in wishlist" })
+               }
                if (!exists) {
                     await wishlistsCollection.insertOne({ userId, productId });
                }
                res.send({ message: "Added to wishlist" });
+          });
+          // remove from wishlist
+          app.delete("/wishlist", async (req, res) => {
+               const { userId, productId } = req.body || {};
+
+               if (!userId || !productId) {
+                    return res.status(400).send({ message: "Invalid data" });
+               }
+               const result = await wishlistsCollection.deleteOne({
+                    userId,
+                    productId
+               });
+               if (result.deletedCount > 0) {
+                    return res.send({ message: "Removed from wishlist" });
+               }
+               res.send({ message: "Item not found" });
+          });
+
+          // get wishlist by user
+          app.get("/wishlist/:userId", async (req, res) => {
+               const userId = req.params.userId;
+               const result = await wishlistsCollection.find({ userId }).toArray();
+               res.send(result);
           });
           // ping test
           await client.db("admin").command({ ping: 1 });
