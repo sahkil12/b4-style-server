@@ -124,13 +124,37 @@ async function run() {
                }
                res.send({ message: "Item not found" });
           });
-
           // get wishlist by user
           app.get("/wishlist/:userId", async (req, res) => {
                const userId = req.params.userId;
-               const result = await wishlistsCollection.find({ userId }).toArray();
-               res.send(result);
+               // const result = await wishlistsCollection.find({ userId }).toArray();
+
+               const products = await wishlistsCollection.aggregate([
+                    {
+                         $match: { userId }
+                    },
+                    {
+                         $lookup: {
+                              from: "products",
+                              let: { productId: "$productId" },
+                              pipeline: [
+                                   {
+                                        $match: {
+                                             $expr: { $eq: ["$_id", { $toObjectId: "$$productId" }] }
+                                        }
+                                   }
+                              ],
+                              as: "product"
+                         }
+                    },
+                    {
+                          $unwind: "$product"
+                    }
+               ]).toArray()
+
+               res.send(products);
           });
+          
           // ping test
           await client.db("admin").command({ ping: 1 });
           console.log("Ping success 🚀");
