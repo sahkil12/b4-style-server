@@ -148,13 +148,23 @@ async function run() {
                          }
                     },
                     {
-                          $unwind: "$product"
+                         $unwind: "$product"
                     }
                ]).toArray()
 
                res.send(products);
           });
-          
+          // delete wish list
+          app.delete("/wishlist/clear/:userId", async (req, res) => {
+               const userId = req.params.userId;
+               const result = await wishlistsCollection.deleteMany({ userId });
+
+               res.send({
+                    success: true,
+                    deletedCount: result.deletedCount,
+                    message: "Wishlist cleared successfully"
+               });
+          });
           // ping test
           await client.db("admin").command({ ping: 1 });
           console.log("Ping success 🚀");
