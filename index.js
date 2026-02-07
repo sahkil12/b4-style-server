@@ -169,7 +169,14 @@ async function run() {
                });
                res.send({ message: "Item removed from cart" });
           });
+          // remove all cart 
+          app.delete("/cart/clear/:userId", async (req, res) => {
+               const { userId } = req.params;
 
+               await cartsCollection.deleteMany({ userId });
+
+               res.send({ message: "All Cart cleared" });
+          });
           // Wishlist add
           app.post("/wishlist", async (req, res) => {
                const { userId, productId } = req.body;
