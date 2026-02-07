@@ -86,13 +86,14 @@ async function run() {
           // add to cart
           app.post("/cart", async (req, res) => {
                const { userId, productId, quantity, size } = req.body
-
+               const createdAt = new Date()
                const existing = await cartsCollection.findOne({ userId, productId, size });
+               // 
                if (existing) {
                     await cartsCollection.updateOne({ _id: existing._id }, { $inc: { quantity } })
                }
                else {
-                    await cartsCollection.insertOne({ userId, productId, quantity, size });
+                    await cartsCollection.insertOne({ userId, productId, quantity, size, createdAt });
                }
                res.send({ message: "Added To Cart" })
           })
@@ -127,6 +128,39 @@ async function run() {
 
                res.send(cartItems);
           });
+          // increase / decrease cart quantity
+          app.patch("/cart/quantity", async (req, res) => {
+               const { cartItemId, type } = req.body;
+
+               const item = await cartsCollection.findOne({
+                    _id: new ObjectId(cartItemId)
+               });
+
+               if (!item) {
+                    return res.status(404).send({ message: "Item not found" });
+               }
+
+               let newQty = item.quantity;
+
+               if (type === "inc") newQty += 1;
+               if (type === "dec") newQty -= 1;
+
+               if (newQty <= 0) {
+                    await cartsCollection.deleteOne({
+                         _id: new ObjectId(cartItemId)
+                    });
+
+                    return res.send({ message: "Item removed" });
+               }
+
+               await cartsCollection.updateOne(
+                    { _id: new ObjectId(cartItemId) },
+                    { $set: { quantity: newQty } }
+               );
+
+               res.send({ message: "Quantity updated" });
+          });
+
 
           // Wishlist add
           app.post("/wishlist", async (req, res) => {
