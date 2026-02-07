@@ -96,6 +96,38 @@ async function run() {
                }
                res.send({ message: "Added To Cart" })
           })
+          // get cart data by user
+          app.get("/cart/:userId", async (req, res) => {
+               const userId = req.params.userId;
+
+               const cartItems = await cartsCollection.aggregate([
+                    {
+                         $match: { userId }
+                    },
+                    {
+                         $lookup: {
+                              from: "products",
+                              let: { productId: "$productId" },
+                              pipeline: [
+                                   {
+                                        $match: {
+                                             $expr: {
+                                                  $eq: ["$_id", { $toObjectId: "$$productId" }]
+                                             }
+                                        }
+                                   }
+                              ],
+                              as: "product"
+                         }
+                    },
+                    {
+                         $unwind: "$product"
+                    }
+               ]).toArray();
+
+               res.send(cartItems);
+          });
+
           // Wishlist add
           app.post("/wishlist", async (req, res) => {
                const { userId, productId } = req.body;
@@ -127,7 +159,6 @@ async function run() {
           // get wishlist by user
           app.get("/wishlist/:userId", async (req, res) => {
                const userId = req.params.userId;
-               // const result = await wishlistsCollection.find({ userId }).toArray();
 
                const products = await wishlistsCollection.aggregate([
                     {
