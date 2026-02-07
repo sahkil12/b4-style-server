@@ -160,7 +160,15 @@ async function run() {
 
                res.send({ message: "Quantity updated" });
           });
+          // remove cart 
+          app.delete("/cart/:cartItemId", async (req, res) => {
+               const { cartItemId } = req.params;
 
+               await cartsCollection.deleteOne({
+                    _id: new ObjectId(cartItemId)
+               });
+               res.send({ message: "Item removed from cart" });
+          });
 
           // Wishlist add
           app.post("/wishlist", async (req, res) => {
