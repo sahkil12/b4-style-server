@@ -1,8 +1,10 @@
 const express = require("express");
 const cors = require("cors");
+const Stripe = require('stripe');
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 const { MongoClient, ObjectId } = require('mongodb');
 // middleware
 app.use(cors());
@@ -88,7 +90,15 @@ async function run() {
                const { userId, productId, quantity, size } = req.body
                const createdAt = new Date()
                const existing = await cartsCollection.findOne({ userId, productId, size });
-               // 
+
+               const product = await productsCollection.findOne({ _id: new ObjectId(productId) })
+               // product check
+               if (!product) return res.status(404).send({ message: "Product not found" })
+               //product quantity check 
+               if (quantity > product.stock) {
+                    return res.status(400).send({ message: "Out of stock" });
+               }
+               // duplicate check
                if (existing) {
                     await cartsCollection.updateOne({ _id: existing._id }, { $inc: { quantity } })
                }
@@ -245,6 +255,11 @@ async function run() {
                     message: "Wishlist cleared successfully"
                });
           });
+
+          // payment stripe implement
+
+
+
           // ping test
           await client.db("admin").command({ ping: 1 });
           console.log("Ping success 🚀");
