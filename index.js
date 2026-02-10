@@ -89,22 +89,47 @@ async function run() {
           app.post("/cart", async (req, res) => {
                const { userId, productId, quantity, size } = req.body
                const createdAt = new Date()
-               const existing = await cartsCollection.findOne({ userId, productId, size });
 
-               const product = await productsCollection.findOne({ _id: new ObjectId(productId) })
-               // product check
-               if (!product) return res.status(404).send({ message: "Product not found" })
-               //product quantity check 
-               if (quantity > product.stock) {
-                    return res.status(400).send({ message: "Out of stock" });
+               if (quantity <= 0) {
+                    return res.status(400).send({ message: "Invalid quantity" });
                }
-               // duplicate check
+
+               const product = await productsCollection.findOne({
+                    _id: new ObjectId(productId)
+               });
+
+               if (!product) {
+                    return res.status(404).send({ message: "Product not found" })
+               }
+               const existing = await cartsCollection.findOne({
+                    userId,
+                    productId,
+                    size
+               });
+
+               const existingQty = existing?.quantity || 0;
+               const totalQty = existingQty + quantity;
+               // FINAL STOCK CHECK
+               if (totalQty > product.stock) {
+                    return res.status(400).send({
+                         message: `Only ${product.stock - existingQty} items left in stock`
+                    });
+               }
                if (existing) {
-                    await cartsCollection.updateOne({ _id: existing._id }, { $inc: { quantity } })
+                    await cartsCollection.updateOne(
+                         { _id: existing._id },
+                         { $set: { quantity: totalQty } }
+                    );
+               } else {
+                    await cartsCollection.insertOne({
+                         userId,
+                         productId,
+                         quantity,
+                         size,
+                         createdAt
+                    });
                }
-               else {
-                    await cartsCollection.insertOne({ userId, productId, quantity, size, createdAt });
-               }
+
                res.send({ message: "Added To Cart" })
           })
           // get cart data by user
@@ -145,13 +170,23 @@ async function run() {
                const item = await cartsCollection.findOne({
                     _id: new ObjectId(cartItemId)
                });
-
                if (!item) {
                     return res.status(404).send({ message: "Item not found" });
                }
 
-               let newQty = item.quantity;
+               const product = await productsCollection.findOne({
+                    _id: new ObjectId(item.productId)
+               });
 
+               let newQty = item.quantity;
+               
+               if (type === "inc" && newQty + 1 > product.stock) {
+                    return res.status(400).send({ message: "Stock limit reached" });
+               }
+               // check invalid action
+               if (!["inc", "dec"].includes(type)) {
+                    return res.status(400).send({ message: "Invalid action" });
+               }
                if (type === "inc") newQty += 1;
                if (type === "dec") newQty -= 1;
 
