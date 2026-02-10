@@ -21,6 +21,7 @@ async function run() {
           const productsCollection = db.collection("products");
           const cartsCollection = db.collection("carts")
           const wishlistsCollection = db.collection("wishlists")
+          const ordersCollection = db.collection("orders")
 
           app.get("/", async (req, res) => {
                res.send("B4 Style Backend is running 🚀");
@@ -179,7 +180,7 @@ async function run() {
                });
 
                let newQty = item.quantity;
-               
+
                if (type === "inc" && newQty + 1 > product.stock) {
                     return res.status(400).send({ message: "Stock limit reached" });
                }
@@ -290,10 +291,115 @@ async function run() {
                     message: "Wishlist cleared successfully"
                });
           });
-
           // payment stripe implement
+          app.post("/create-payment-intent", async (req, res) => {
 
+               try {
+                    const {
+                         userId,
+                         name,
+                         email,
+                         phone,
+                         address,
+                         city
+                    } = req.body;
 
+                    // delivery charge
+                    const deliveryCharge = city === "Chittagong" ? 70 : 120;
+
+                    const cartItems = await cartsCollection.aggregate([
+                         { $match: { userId } },
+                         {
+                              $lookup: {
+                                   from: "products",
+                                   let: { productId: "$productId" },
+                                   pipeline: [
+                                        {
+                                             $match: {
+                                                  $expr: { $eq: ["$_id", { $toObjectId: "$$productId" }] }
+                                             }
+                                        }
+                                   ],
+                                   as: "product"
+                              }
+                         },
+                         { $unwind: "$product" }
+                    ]).toArray();
+
+                    if (cartItems.length === 0) {
+                         return res.status(400).send({ message: "Cart is empty" });
+                    }
+                    // 3️⃣ calculate total
+                    let subtotal = 0;
+
+                    const items = cartItems.map(item => {
+                         const total = item.quantity * item.product.price;
+                         subtotal += total;
+
+                         return {
+                              productId: item.productId,
+                              title: item.product.title,
+                              size: item.size,
+                              quantity: item.quantity,
+                              price: item.product.price,
+                              totalProductAmount: total
+                         };
+                    });
+                    // calculate total amount
+                    const totalAmount = subtotal + deliveryCharge;
+                    // 4️⃣ stripe payment intent
+                    const paymentIntent = await stripe.paymentIntents.create({
+                         amount: totalAmount * 100,
+                         currency: "bdt",
+                         payment_method_types: ["card"],
+                         metadata: { userId }
+                    });
+                    // 5️⃣ save order (pending)
+                    await ordersCollection.insertOne({
+                         userId,
+                         items,
+                         subtotal,
+                         deliveryCharge,
+                         totalAmount,
+                         paymentIntentId: paymentIntent.id,
+                         paymentStatus: "pending",
+                         orderStatus: "pending",
+                         shippingAddress: {
+                              name,
+                              email,
+                              phone,
+                              address,
+                              city
+                         },
+                         createdAt: new Date()
+                    });
+
+                    res.send({
+                         clientSecret: paymentIntent.client_secret
+                    });
+               }
+               catch (err) {
+                    console.log(err);
+                    res.status(500).send({ message: "Payment init failed" });
+               }
+          })
+          // payment confirm
+          app.post("/confirm-payment", async (req, res) => {
+               const { paymentIntentId } = req.body;
+
+               await ordersCollection.updateOne(
+                    { paymentIntentId },
+                    {
+                         $set: {
+                              paymentStatus: "paid",
+                              orderStatus: "processing",
+                              paidAt: new Date()
+                         }
+                    }
+               );
+
+               res.send({ success: true });
+          });
 
           // ping test
           await client.db("admin").command({ ping: 1 });
