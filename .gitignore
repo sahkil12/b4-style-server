@@ -1,3 +1,4 @@
 node_modules
 .env
 .env.local
+b4-styles-firebase-service-key.json

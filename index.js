@@ -6,6 +6,9 @@ const app = express();
 const port = process.env.PORT || 5000;
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 const { MongoClient, ObjectId } = require('mongodb');
+
+const admin = require("./firebaseAdmin")
+
 // middleware
 app.use(cors());
 app.use(express.json());
@@ -74,7 +77,6 @@ async function run() {
                     res.send(products);
                }
                catch (err) {
-                    console.log(err);
                     res.status(500).send({ message: "Failed to fetch products" });
                }
           });
@@ -329,7 +331,7 @@ async function run() {
                     if (cartItems.length === 0) {
                          return res.status(400).send({ message: "Cart is empty" });
                     }
-                    // 3️⃣ calculate total
+                    // calculate total
                     let subtotal = 0;
 
                     const items = cartItems.map(item => {
@@ -347,14 +349,14 @@ async function run() {
                     });
                     // calculate total amount
                     const totalAmount = subtotal + deliveryCharge;
-                    // 4️⃣ stripe payment intent
+                    // stripe payment intent
                     const paymentIntent = await stripe.paymentIntents.create({
                          amount: totalAmount * 100,
                          currency: "bdt",
                          payment_method_types: ["card"],
                          metadata: { userId }
                     });
-                    // 5️⃣ save order (pending)
+                    // save order (pending)
                     await ordersCollection.insertOne({
                          userId,
                          items,
@@ -379,7 +381,6 @@ async function run() {
                     });
                }
                catch (err) {
-                    console.log(err);
                     res.status(500).send({ message: "Payment init failed" });
                }
           })
