@@ -8,9 +8,16 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 const { MongoClient, ObjectId } = require('mongodb');
 
 const admin = require("./firebaseAdmin")
+const verifyToken = require("./verifyToken")
 
 // middleware
-app.use(cors());
+app.use(cors({
+     origin: [
+          "http://localhost:5173",
+          "https://b4-style.vercel.app"
+     ],
+     credentials: true
+}));
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.gr8kgxz.mongodb.net/?appName=Cluster0`;
@@ -41,7 +48,6 @@ async function run() {
                          isNew,
                          isBestSeller
                     } = req.query;
-
                     // Category
                     if (category) query.category = category;
                     // Size
@@ -89,8 +95,9 @@ async function run() {
                res.send(product)
           })
           // add to cart
-          app.post("/cart", async (req, res) => {
-               const { userId, productId, quantity, size } = req.body
+          app.post("/cart", verifyToken, async (req, res) => {
+               const userId = req.user.uid;
+               const { productId, quantity, size } = req.body
                const createdAt = new Date()
 
                if (quantity <= 0) {
@@ -136,8 +143,8 @@ async function run() {
                res.send({ message: "Added To Cart" })
           })
           // get cart data by user
-          app.get("/cart/:userId", async (req, res) => {
-               const userId = req.params.userId;
+          app.get("/cart", verifyToken, async (req, res) => {
+               const userId = req.user.uid;
 
                const cartItems = await cartsCollection.aggregate([
                     {
@@ -167,7 +174,7 @@ async function run() {
                res.send(cartItems);
           });
           // increase / decrease cart quantity
-          app.patch("/cart/quantity", async (req, res) => {
+          app.patch("/cart/quantity", verifyToken, async (req, res) => {
                const { cartItemId, type } = req.body;
 
                const item = await cartsCollection.findOne({
@@ -208,8 +215,23 @@ async function run() {
 
                res.send({ message: "Quantity updated" });
           });
+          // remove all cart 
+          app.delete("/cart/clear", verifyToken, async (req, res) => {
+               try {
+                    const userId = req.user.uid;
+                    const result = await cartsCollection.deleteMany({ userId });
+
+                    res.status(200).send({
+                         message: "Cart cleared successfully",
+                         deletedCount: result.deletedCount
+                    });
+
+               } catch (error) {
+                    res.status(500).send({ message: "Failed to clear cart" });
+               }
+          });
           // remove cart 
-          app.delete("/cart/:cartItemId", async (req, res) => {
+          app.delete("/cart/:cartItemId", verifyToken, async (req, res) => {
                const { cartItemId } = req.params;
 
                await cartsCollection.deleteOne({
@@ -217,17 +239,11 @@ async function run() {
                });
                res.send({ message: "Item removed from cart" });
           });
-          // remove all cart 
-          app.delete("/cart/clear/:userId", async (req, res) => {
-               const { userId } = req.params;
-
-               await cartsCollection.deleteMany({ userId });
-
-               res.send({ message: "All Cart cleared" });
-          });
           // Wishlist add
-          app.post("/wishlist", async (req, res) => {
-               const { userId, productId } = req.body;
+          app.post("/wishlist", verifyToken, async (req, res) => {
+               const userId = req.user.uid;
+
+               const { productId } = req.body;
                const exists = await wishlistsCollection.findOne({ userId, productId });
                if (exists) {
                     return res.send({ message: "Already in wishlist" })
@@ -238,8 +254,9 @@ async function run() {
                res.send({ message: "Added to wishlist" });
           });
           // remove from wishlist
-          app.delete("/wishlist", async (req, res) => {
-               const { userId, productId } = req.body || {};
+          app.delete("/wishlist", verifyToken, async (req, res) => {
+               const userId = req.user.uid;
+               const { productId } = req.body || {};
 
                if (!userId || !productId) {
                     return res.status(400).send({ message: "Invalid data" });
@@ -254,8 +271,8 @@ async function run() {
                res.send({ message: "Item not found" });
           });
           // get wishlist by user
-          app.get("/wishlist/:userId", async (req, res) => {
-               const userId = req.params.userId;
+          app.get("/wishlist", verifyToken, async (req, res) => {
+               const userId = req.user.uid;
 
                const products = await wishlistsCollection.aggregate([
                     {
@@ -283,8 +300,9 @@ async function run() {
                res.send(products);
           });
           // delete wish list
-          app.delete("/wishlist/clear/:userId", async (req, res) => {
-               const userId = req.params.userId;
+          app.delete("/wishlist/clear", verifyToken, async (req, res) => {
+               const userId = req.user.uid;
+
                const result = await wishlistsCollection.deleteMany({ userId });
 
                res.send({
@@ -294,11 +312,10 @@ async function run() {
                });
           });
           // payment stripe implement
-          app.post("/create-payment-intent", async (req, res) => {
-
+          app.post("/create-payment-intent", verifyToken, async (req, res) => {
                try {
+                    const userId = req.user.uid;
                     const {
-                         userId,
                          name,
                          email,
                          phone,
@@ -385,10 +402,14 @@ async function run() {
                }
           })
           // payment confirm
-          app.post("/confirm-payment", async (req, res) => {
+          app.post("/confirm-payment", verifyToken, async (req, res) => {
                const { paymentIntentId } = req.body;
 
                const order = await ordersCollection.findOne({ paymentIntentId });
+
+               if (order.userId !== req.user.uid) {
+                    return res.status(403).send({ message: "Forbidden" });
+               }
 
                if (!order) {
                     return res.status(404).send({ message: "Order not found" });
