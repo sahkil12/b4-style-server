@@ -387,6 +387,12 @@ async function run() {
           app.post("/confirm-payment", async (req, res) => {
                const { paymentIntentId } = req.body;
 
+               const order = await ordersCollection.findOne({ paymentIntentId });
+
+               if (!order) {
+                    return res.status(404).send({ message: "Order not found" });
+               }
+
                await ordersCollection.updateOne(
                     { paymentIntentId },
                     {
@@ -397,10 +403,20 @@ async function run() {
                          }
                     }
                );
+               // products quantity manage
+               for (const item of order.items) {
+                    await productsCollection.updateOne(
+                         { _id: new ObjectId(item.productId) },
+                         {
+                              $inc: { stock: -item.quantity },
+                         }
+                    );
+               }
+
+               await cartsCollection.deleteMany({ userId: order.userId });
 
                res.send({ success: true });
           });
-
           // ping test
           await client.db("admin").command({ ping: 1 });
           console.log("Ping success 🚀");
