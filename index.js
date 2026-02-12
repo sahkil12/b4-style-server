@@ -7,7 +7,6 @@ const port = process.env.PORT || 5000;
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 const { MongoClient, ObjectId } = require('mongodb');
 
-const admin = require("./firebaseAdmin")
 const verifyToken = require("./verifyToken")
 
 // middleware
@@ -32,6 +31,7 @@ async function run() {
           const cartsCollection = db.collection("carts")
           const wishlistsCollection = db.collection("wishlists")
           const ordersCollection = db.collection("orders")
+          const usersCollections = db.collection("users")
 
           app.get("/", async (req, res) => {
                res.send("B4 Style Backend is running 🚀");
@@ -94,6 +94,39 @@ async function run() {
 
                res.send(product)
           })
+          // user routes
+          app.post("/users", async (req, res) => {
+               try {
+                    const { email, name } = req.body
+                    // check duplicate user
+                    const existingUser = await usersCollections.findOne({ email })
+
+                    if (existingUser) {
+                         return res.status(200).json({
+                              message: 'User already exists',
+                         });
+                    }
+
+                    const newUser = {
+                         email,
+                         name,
+                         role: "user",
+                         createAt: new Date()
+                    }
+                    const result = await usersCollections.insertOne(newUser)
+
+                    res.status(201).json({
+                         message: "User Created",
+                         insertId: result.insertedId,
+                         role: "user"
+                    })
+               }
+               catch (error) {
+                    res.status(500).json({ message: error.message });
+               }
+          })
+
+
           // add to cart
           app.post("/cart", verifyToken, async (req, res) => {
                const userId = req.user.uid;
