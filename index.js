@@ -125,7 +125,34 @@ async function run() {
                     res.status(500).json({ message: error.message });
                }
           })
+          // 
+          app.get("/users/role/:email", async (req, res) => {
+               try {
+                    const email = req.params.email
+                    console.log(email);
+                    // email check 
+                    if (!email) {
+                         return res.status(400).send({ message: "Email is required" });
+                    }
 
+                    const user = await usersCollections.findOne({ email })
+                    // 
+                    if (!user) {
+                         return res.status(404).send({ message: "User not found!" })
+                    }
+                    console.log(user);
+                    res.send({
+                         email: email,
+                         role: user.role
+                    })
+               }
+               catch (error) {
+                    res.status(500).send({
+                         message: "Failed to fetch user role",
+                         error: error.message
+                    });
+               }
+          })
 
           // add to cart
           app.post("/cart", verifyToken, async (req, res) => {
