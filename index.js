@@ -126,10 +126,9 @@ async function run() {
                }
           })
           // 
-          app.get("/users/role/:email", async (req, res) => {
+          app.get("/users/role/:email", verifyToken, async (req, res) => {
                try {
                     const email = req.params.email
-                    console.log(email);
                     // email check 
                     if (!email) {
                          return res.status(400).send({ message: "Email is required" });
@@ -140,9 +139,7 @@ async function run() {
                     if (!user) {
                          return res.status(404).send({ message: "User not found!" })
                     }
-                    console.log(user);
                     res.send({
-                         email: email,
                          role: user.role
                     })
                }
@@ -153,7 +150,6 @@ async function run() {
                     });
                }
           })
-
           // add to cart
           app.post("/cart", verifyToken, async (req, res) => {
                const userId = req.user.uid;
