@@ -33,6 +33,21 @@ async function run() {
           const ordersCollection = db.collection("orders")
           const usersCollections = db.collection("users")
 
+          // admin verify 
+          const verifyAdmin = async (req, res, next) => {
+               const userEmail = req.decoded.email
+               const user = await usersCollections.findOne({
+                    email: userEmail
+               })
+               // admin check 
+               if (!user || user.role !== "admin") {
+                    return res.status(403).send({
+                         message: "Access denied (Admin only)"
+                    })
+               }
+               next()
+          }
+
           app.get("/", async (req, res) => {
                res.send("B4 Style Backend is running 🚀");
           });
@@ -125,7 +140,7 @@ async function run() {
                     res.status(500).json({ message: error.message });
                }
           })
-          // 
+          // user role with email
           app.get("/users/role/:email", verifyToken, async (req, res) => {
                try {
                     const email = req.params.email
@@ -150,6 +165,69 @@ async function run() {
                     });
                }
           })
+          // admin all route 
+          app.get("/admin/stats", verifyToken, verifyAdmin, async (req, res) => {
+               try {
+                    // total users
+                    const totalUsers = await usersCollections.countDocuments({
+                         role: "user"
+                    });
+                    // total admins
+                    const totalAdmins = await usersCollections.countDocuments({
+                         role: "admin"
+                    });
+                    // total products
+                    const totalProducts = await productsCollection.countDocuments();
+                    // total orders
+                    const totalOrders = await ordersCollection.countDocuments();
+                    // total revenue (only paid orders)
+                    const revenueResult = await ordersCollection.aggregate([
+                         {
+                              $match: {
+                                   paymentStatus: "paid"
+                              }
+                         },
+                         {
+                              $group: {
+                                   _id: null,
+                                   totalRevenue: {
+                                        $sum: "$totalAmount"
+                                   }
+                              }
+                         }
+                    ]).toArray();
+
+                    const totalRevenue =
+                         revenueResult.length > 0
+                              ? revenueResult[0].totalRevenue
+                              : 0;
+                    // latest 5 orders
+                    const latestOrders = await ordersCollection
+                         .find()
+                         .sort({ createdAt: -1 })
+                         .limit(5)
+                         .toArray();
+                    // FINAL RESPONSE
+                    res.send({
+
+                         totalUsers,
+                         totalAdmins,
+                         totalProducts,
+                         totalOrders,
+                         totalRevenue,
+                         latestOrders
+
+                    });
+               }
+               catch (error) {
+
+                    console.log(error);
+
+                    res.status(500).send({
+                         message: "Failed to load admin stats"
+                    });
+               }
+          });
           // add to cart
           app.post("/cart", verifyToken, async (req, res) => {
                const userId = req.user.uid;
