@@ -35,7 +35,7 @@ async function run() {
 
           // admin verify 
           const verifyAdmin = async (req, res, next) => {
-               const userEmail = req.decoded.email
+               const userEmail = req.user.email
                const user = await usersCollections.findOne({
                     email: userEmail
                })
@@ -209,14 +209,12 @@ async function run() {
                          .toArray();
                     // FINAL RESPONSE
                     res.send({
-
                          totalUsers,
                          totalAdmins,
                          totalProducts,
                          totalOrders,
                          totalRevenue,
                          latestOrders
-
                     });
                }
                catch (error) {
