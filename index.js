@@ -226,6 +226,55 @@ async function run() {
                     });
                }
           });
+          // Weekly admin status
+          app.get("/admin/weekly-stats", verifyToken, verifyAdmin, async (req, res) => {
+               
+               try {
+                    const result = await ordersCollection.aggregate([
+                         {
+                              $match: {
+                                   paymentStatus: "paid"
+                              }
+                         },
+                         {
+                              $group: {
+                                   _id: {
+                                        year: { $year: "$createdAt" },
+                                        week: { $week: "$createdAt" }
+                                   },
+                                   weeklyRevenue: {
+                                        $sum: "$totalAmount"
+                                   },
+                                   weeklyOrders: {
+                                        $sum: 1
+                                   }
+                              }
+                         },
+                         {
+                              $sort: {
+                                   "_id.year": 1,
+                                   "_id.week": 1
+                              }
+                         },
+                         {
+                              $limit: 7
+                         }
+                    ]).toArray();
+
+                    const formatted = result.map(item => ({
+                         week: `Week ${item._id.week}`,
+                         revenue: item.weeklyRevenue,
+                         orders: item.weeklyOrders
+                    }));
+                    res.send(formatted);
+               }
+               catch (err) {
+                    res.status(500).send({
+                         message: "Weekly stats failed"
+                    });
+               }
+          });
+
           // add to cart
           app.post("/cart", verifyToken, async (req, res) => {
                const userId = req.user.uid;
