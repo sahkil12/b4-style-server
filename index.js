@@ -64,7 +64,10 @@ async function run() {
                          isBestSeller
                     } = req.query;
                     // Category
-                    if (category) query.category = category;
+                    // if (category) query.category = category;
+                    if (category) {
+                         query.category = new RegExp(`^${category}$`, 'i');
+                    }
                     // Size
                     if (size) {
                          query.sizes = size;
@@ -93,7 +96,6 @@ async function run() {
                     const products = await productsCollection
                          .find(query)
                          .sort(sortQuery)
-                         .limit(search ? 16 : 0)
                          .toArray()
                     res.send(products);
                }
@@ -228,7 +230,7 @@ async function run() {
           });
           // Weekly admin status
           app.get("/admin/weekly-stats", verifyToken, verifyAdmin, async (req, res) => {
-               
+
                try {
                     const result = await ordersCollection.aggregate([
                          {
@@ -274,7 +276,6 @@ async function run() {
                     });
                }
           });
-
           // add to cart
           app.post("/cart", verifyToken, async (req, res) => {
                const userId = req.user.uid;
