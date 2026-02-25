@@ -51,6 +51,20 @@ async function run() {
           app.get("/", async (req, res) => {
                res.send("B4 Style Backend is running 🚀");
           });
+          // 
+          app.post("/products", verifyToken, verifyAdmin, async (req, res) => {
+               try {
+                    const product = req.body;
+                    const result =
+                         await productsCollection.insertOne(product);
+                    res.send(result);
+               }
+               catch {
+                    res.status(500).send({
+                         message: "Failed"
+                    });
+               }
+          });
           // get products 
           app.get("/products", async (req, res) => {
                try {
