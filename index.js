@@ -126,7 +126,7 @@ async function run() {
                res.send(product)
           })
           // delete product
-          app.delete("/products/:id", async (req, res) => {
+          app.delete("/products/:id", verifyToken, verifyAdmin, async (req, res) => {
                try {
                     const id = req.params.id
                     // check valid ObjectId
