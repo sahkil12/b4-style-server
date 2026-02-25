@@ -51,7 +51,7 @@ async function run() {
           app.get("/", async (req, res) => {
                res.send("B4 Style Backend is running 🚀");
           });
-          // 
+          // products post api
           app.post("/products", verifyToken, verifyAdmin, async (req, res) => {
                try {
                     const product = req.body;
@@ -124,6 +124,32 @@ async function run() {
                const product = await productsCollection.findOne(query)
 
                res.send(product)
+          })
+          // delete product
+          app.delete("/products/:id", async (req, res) => {
+               try {
+                    const id = req.params.id
+                    // check valid ObjectId
+                    if (!ObjectId.isValid(id)) {
+
+                         return res.status(400).send({
+                              message: "Invalid Product ID"
+                         });
+                    }
+                    const query = { _id: new ObjectId(id) }
+                    const result = await productsCollection.deleteOne(query)
+                    res.send({
+                         success: true,
+                         message: "Product Delete Successfully",
+                         deletedCount: result.deletedCount
+                    })
+               }
+               catch {
+                    res.status(500).send({
+                         success: false,
+                         message: "product delete failed"
+                    })
+               }
           })
           // user routes
           app.post("/users", async (req, res) => {
