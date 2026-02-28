@@ -117,6 +117,26 @@ async function run() {
                     res.status(500).send({ message: "Failed to fetch products" });
                }
           });
+          // update product
+          app.patch("/products/:id", async (req, res) => {
+               try {
+                    const id = req.params.id;
+                    const updatedDoc = req.body;
+                    const result = await productsCollection.updateOne(
+                         { _id: new ObjectId(id) },
+                         { $set: updatedDoc }
+                    );
+                    res.send({
+                         success: true,
+                         result
+                    });
+               }
+               catch {
+                    res.status(500).send({
+                         message: "Update Failed"
+                    });
+               }
+          });
           //get product with id
           app.get("/products/:id", async (req, res) => {
                const id = req.params.id
