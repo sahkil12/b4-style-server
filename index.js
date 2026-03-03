@@ -202,6 +202,19 @@ async function run() {
                     res.status(500).json({ message: error.message });
                }
           })
+          // get all users
+          app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
+
+               try {
+                    const users = await usersCollections.find().toArray()
+                    res.send(users)
+               }
+               catch {
+                    res.status(500).send({
+                         message: "Failed to get users",
+                    });
+               }
+          })
           // user role with email
           app.get("/users/role/:email", verifyToken, async (req, res) => {
                try {
