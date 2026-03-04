@@ -225,7 +225,7 @@ async function run() {
                     }
 
                     const user = await usersCollections.findOne({ email })
-                    // 
+
                     if (!user) {
                          return res.status(404).send({ message: "User not found!" })
                     }
@@ -278,10 +278,16 @@ async function run() {
                     const id = req.params.id
                     const query = { _id: new ObjectId(id) }
                     const user = await usersCollections.findOne(query)
+                    const adminEmail = req.user?.email
 
                     if (!user) {
                          return res.status(404).send({
                               message: "User Not found"
+                         })
+                    }
+                    if (adminEmail === user?.email) {
+                         return res.status(400).send({
+                              message: "You cannot remove your own admin role"
                          })
                     }
 
