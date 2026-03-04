@@ -240,6 +240,70 @@ async function run() {
                     });
                }
           })
+          // make admin 
+          app.patch("/users/make-admin/:id", verifyToken, verifyAdmin, async (req, res) => {
+               try {
+                    const id = req.params.id
+                    const query = { _id: new ObjectId(id) }
+                    const user = await usersCollections.findOne(query)
+
+                    if (!user) {
+                         return res.status(404).send({
+                              message: "User Not found"
+                         })
+                    }
+
+                    const result = await usersCollections.updateOne(
+                         query,
+                         {
+                              $set: {
+                                   role: "admin"
+                              }
+                         }
+                    )
+                    res.status(200).send({
+                         message: "Make Admin Successfully",
+                         result
+                    })
+               }
+               catch {
+                    res.status(500).send({
+                         message: "Failed to make admin",
+                    });
+               }
+          })
+          // remove admin
+          app.patch("/users/remove-admin/:id", verifyToken, verifyAdmin, async (req, res) => {
+               try {
+                    const id = req.params.id
+                    const query = { _id: new ObjectId(id) }
+                    const user = await usersCollections.findOne(query)
+
+                    if (!user) {
+                         return res.status(404).send({
+                              message: "User Not found"
+                         })
+                    }
+
+                    const result = await usersCollections.updateOne(
+                         query,
+                         {
+                              $set: {
+                                   role: "user"
+                              }
+                         }
+                    )
+                    res.status(200).send({
+                         message: "Remove Admin Successfully",
+                         result
+                    })
+               }
+               catch {
+                    res.status(500).send({
+                         message: "Failed to Remove admin",
+                    });
+               }
+          })
           // admin all route 
           app.get("/admin/stats", verifyToken, verifyAdmin, async (req, res) => {
                try {
