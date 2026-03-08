@@ -780,10 +780,23 @@ async function run() {
           // get orders
           app.get("/orders", verifyToken, verifyAdmin, async (req, res) => {
 
-               const orders = await ordersCollection.find({paymentStatus: 'paid'}).toArray()
+               const orders = await ordersCollection.find({ paymentStatus: 'paid' }).toArray()
                res.send(orders)
           })
+          // update order status
+          app.patch("/orders/:id", verifyToken, verifyAdmin, async (req, res) => {
 
+               const id = req.params.id;
+               const { orderStatus } = req.body;
+
+               const result = await ordersCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    {
+                         $set: { orderStatus: orderStatus }
+                    }
+               );   
+               res.send(result);
+          })
           // ping test
           await client.db("admin").command({ ping: 1 });
           console.log("Ping success 🚀");
