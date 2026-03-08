@@ -708,7 +708,7 @@ async function run() {
                          deliveryCharge,
                          totalAmount,
                          paymentIntentId: paymentIntent.id,
-                         orderId:orderId,
+                         orderId: orderId,
                          paymentStatus: "pending",
                          orderStatus: "pending",
                          shippingAddress: {
@@ -777,6 +777,13 @@ async function run() {
 
                res.send({ success: true });
           });
+          // get orders
+          app.get("/orders", verifyToken, verifyAdmin, async (req, res) => {
+
+               const orders = await ordersCollection.find({paymentStatus: 'paid'}).toArray()
+               res.send(orders)
+          })
+
           // ping test
           await client.db("admin").command({ ping: 1 });
           console.log("Ping success 🚀");
