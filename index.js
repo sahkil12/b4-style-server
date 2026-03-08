@@ -80,7 +80,8 @@ async function run() {
                     // Category
                     // if (category) query.category = category;
                     if (category) {
-                         query.category = new RegExp(`^${category}$`, 'i');
+                         // query.category = new RegExp(`^${category}$`, 'i');
+                         query.category = { $regex: `^${category}$`, $options: "i" };
                     }
                     // Size
                     if (size) {
@@ -118,7 +119,7 @@ async function run() {
                }
           });
           // update product
-          app.patch("/products/:id", async (req, res) => {
+          app.patch("/products/:id", verifyToken, verifyAdmin, async (req, res) => {
                try {
                     const id = req.params.id;
                     const updatedDoc = req.body;
@@ -188,7 +189,7 @@ async function run() {
                          email,
                          name,
                          role: "user",
-                         createAt: new Date()
+                         createdAt: new Date()
                     }
                     const result = await usersCollections.insertOne(newUser)
 
@@ -732,12 +733,12 @@ async function run() {
 
                const order = await ordersCollection.findOne({ paymentIntentId });
 
-               if (order.userId !== req.user.uid) {
-                    return res.status(403).send({ message: "Forbidden" });
-               }
-
                if (!order) {
                     return res.status(404).send({ message: "Order not found" });
+               }
+
+               if (order.userId !== req.user.uid) {
+                    return res.status(403).send({ message: "Forbidden" });
                }
 
                await ordersCollection.updateOne(
@@ -752,12 +753,22 @@ async function run() {
                );
                // products quantity manage
                for (const item of order.items) {
-                    await productsCollection.updateOne(
-                         { _id: new ObjectId(item.productId) },
+
+                    const result = await productsCollection.updateOne(
                          {
-                              $inc: { stock: -item.quantity },
+                              _id: new ObjectId(item.productId),
+                              stock: { $gte: item.quantity }
+                         },
+                         {
+                              $inc: { stock: -item.quantity }
                          }
                     );
+
+                    if (result.modifiedCount === 0) {
+                         return res.status(400).send({
+                              message: "Some items are out of stock"
+                         });
+                    }
                }
 
                await cartsCollection.deleteMany({ userId: order.userId });
