@@ -646,7 +646,8 @@ async function run() {
                          email,
                          phone,
                          address,
-                         city
+                         city,
+                         orderId
                     } = req.body;
 
                     // delivery charge
@@ -707,6 +708,7 @@ async function run() {
                          deliveryCharge,
                          totalAmount,
                          paymentIntentId: paymentIntent.id,
+                         orderId:orderId,
                          paymentStatus: "pending",
                          orderStatus: "pending",
                          shippingAddress: {
