@@ -799,7 +799,7 @@ async function run() {
                res.send(result);
           })
           // delete order 
-          app.delete("/orders/delete/:id", async (req, res) => {
+          app.delete("/orders/delete/:id", verifyToken, verifyAdmin, async (req, res) => {
                try {
                     const id = req.params.id
                     const result = await ordersCollection.deleteMany({ _id: new ObjectId(id) })
