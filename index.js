@@ -446,11 +446,11 @@ async function run() {
                const existingQty = existing?.quantity || 0;
                const totalQty = existingQty + quantity;
                // FINAL STOCK CHECK
-               if (totalQty > product.stock) {
-                    return res.status(400).send({
-                         message: `Only ${product.stock - existingQty} items left in stock`
-                    });
-               }
+               // if (totalQty > product.stock) {
+               //      return res.status(400).send({
+               //           message: `Only ${product.stock - existingQty} items left in stock`
+               //      });
+               // }
                if (existing) {
                     await cartsCollection.updateOne(
                          { _id: existing._id },
@@ -726,62 +726,67 @@ async function run() {
                     });
                }
                catch (err) {
+                    console.log(err);
                     res.status(500).send({ message: "Payment init failed" });
                }
           })
           // payment confirm
           app.post("/confirm-payment", verifyToken, async (req, res) => {
-               const { paymentIntentId } = req.body;
+               try {
+                    const { paymentIntentId } = req.body;
 
-               const order = await ordersCollection.findOne({ paymentIntentId });
+                    const order = await ordersCollection.findOne({ paymentIntentId });
 
-               if (!order) {
-                    return res.status(404).send({ message: "Order not found" });
-               }
-
-               if (order.userId !== req.user.uid) {
-                    return res.status(403).send({ message: "Forbidden" });
-               }
-
-               await ordersCollection.updateOne(
-                    { paymentIntentId },
-                    {
-                         $set: {
-                              paymentStatus: "paid",
-                              orderStatus: "processing",
-                              paidAt: new Date()
-                         }
+                    if (!order) {
+                         return res.status(404).send({ message: "Order not found" });
                     }
-               );
-               // products quantity manage
-               for (const item of order.items) {
 
-                    const result = await productsCollection.updateOne(
+                    if (order.userId !== req.user.uid) {
+                         return res.status(403).send({ message: "Forbidden" });
+                    }
+
+                    await ordersCollection.updateOne(
+                         { paymentIntentId },
                          {
-                              _id: new ObjectId(item.productId),
-                              stock: { $gte: item.quantity }
-                         },
-                         {
-                              $inc: { stock: -item.quantity }
+                              $set: {
+                                   paymentStatus: "paid",
+                                   orderStatus: "processing",
+                                   paidAt: new Date()
+                              }
                          }
                     );
+                    // products quantity manage
+                    // for (const item of order.items) {
 
-                    if (result.modifiedCount === 0) {
-                         return res.status(400).send({
-                              message: "Some items are out of stock"
-                         });
-                    }
+                    //      const result = await productsCollection.updateOne(
+                    //           {
+                    //                _id: new ObjectId(item.productId),
+                    //                stock: { $gte: item.quantity }
+                    //           },
+                    //           {
+                    //                $inc: { stock: -item.quantity }
+                    //           }
+                    //      );
+
+                    //      if (result.modifiedCount === 0) {
+                    //           return res.status(400).send({
+                    //                message: "Some items are out of stock"
+                    //           });
+                    //      }
+                    // }
+
+                    await cartsCollection.deleteMany({ userId: order.userId });
+
+                    res.send({ success: true });
+               } catch (error) {
+                    console.log(error);
                }
-
-               await cartsCollection.deleteMany({ userId: order.userId });
-
-               res.send({ success: true });
           });
           // get orders
           app.get("/orders", verifyToken, verifyAdmin, async (req, res) => {
 
-               const query = { createdAt: -1 };
-               const orders = await ordersCollection.find({ paymentStatus: 'paid' }).sort(query).toArray()
+               // const query = { createdAt: -1 };
+               const orders = await ordersCollection.find({ paymentStatus: 'paid' }).sort({ createdAt: -1 }).toArray()
                res.send(orders)
           })
           // update order status
