@@ -785,9 +785,23 @@ async function run() {
           // get orders
           app.get("/orders", verifyToken, verifyAdmin, async (req, res) => {
 
+               const page = parseInt(req.query.page) || 1;
+               const limit = parseInt(req.query.limit) || 25;
+               const skip = (page - 1) * limit;
+
                // const query = { createdAt: -1 };
-               const orders = await ordersCollection.find({ paymentStatus: 'paid' }).sort({ createdAt: -1 }).toArray()
-               res.send(orders)
+               const orders = await ordersCollection
+                    .find({ paymentStatus: 'paid' })
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .toArray()
+
+               const total = await ordersCollection.countDocuments({ paymentStatus: "paid" });
+               res.send({
+                    orders,
+                    total
+               })
           })
           // update order status
           app.patch("/orders/:id", verifyToken, verifyAdmin, async (req, res) => {
