@@ -780,7 +780,8 @@ async function run() {
           // get orders
           app.get("/orders", verifyToken, verifyAdmin, async (req, res) => {
 
-               const orders = await ordersCollection.find({ paymentStatus: 'paid' }).toArray()
+               const query = { createdAt: -1 };
+               const orders = await ordersCollection.find({ paymentStatus: 'paid' }).sort(query).toArray()
                res.send(orders)
           })
           // update order status
@@ -794,8 +795,24 @@ async function run() {
                     {
                          $set: { orderStatus: orderStatus }
                     }
-               );   
+               );
                res.send(result);
+          })
+          // delete order 
+          app.delete("/orders/delete/:id", async (req, res) => {
+               try {
+                    const id = req.params.id
+                    const result = await ordersCollection.deleteMany({ _id: new ObjectId(id) })
+
+                    res.status(200).send({
+                         success: true,
+                         deletedCount: result.deletedCount,
+                         message: "order delete successfully"
+                    })
+
+               } catch (error) {
+                    console.log(error);
+               }
           })
           // ping test
           await client.db("admin").command({ ping: 1 });
