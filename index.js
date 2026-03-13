@@ -241,6 +241,32 @@ async function run() {
                     });
                }
           })
+          // user update 
+          app.patch('/users', verifyToken, async (req, res) => {
+               const user = req.body;
+               const email = req.user.email;
+               
+               const filter = { email: email };
+               const updatedDoc = {
+                    $set: {
+                         name: user.name,
+                         number: user.number,
+                    },
+               };
+
+               try {
+                    const result = await usersCollections.updateOne(filter, updatedDoc);
+
+                    if (result.modifiedCount > 0) {
+                         res.send({ success: true, message: 'Profile updated successfully' });
+                    } else {
+                         res.send({ success: false, message: 'No changes made' });
+                    }
+               } catch (error) {
+                    res.status(500).send({ message: 'Internal Server Error', error });
+               }
+          });
+
           // make admin 
           app.patch("/users/make-admin/:id", verifyToken, verifyAdmin, async (req, res) => {
                try {
