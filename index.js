@@ -145,7 +145,7 @@ async function run() {
                const product = await productsCollection.findOne(query)
 
                res.send(product)
-          })
+          });
           // delete product
           app.delete("/products/:id", verifyToken, verifyAdmin, async (req, res) => {
                try {
@@ -171,7 +171,7 @@ async function run() {
                          message: "product delete failed"
                     })
                }
-          })
+          });
           // user routes
           app.post("/users", async (req, res) => {
                try {
@@ -202,7 +202,7 @@ async function run() {
                catch (error) {
                     res.status(500).json({ message: error.message });
                }
-          })
+          });
           // get all users
           app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
 
@@ -215,7 +215,7 @@ async function run() {
                          message: "Failed to get users",
                     });
                }
-          })
+          });
           // user role with email
           app.get("/users/role/:email", verifyToken, async (req, res) => {
                try {
@@ -240,12 +240,12 @@ async function run() {
                          error: error.message
                     });
                }
-          })
+          });
           // user update 
           app.patch('/users', verifyToken, async (req, res) => {
                const user = req.body;
                const email = req.user.email;
-               
+
                const filter = { email: email };
                const updatedDoc = {
                     $set: {
@@ -266,7 +266,6 @@ async function run() {
                     res.status(500).send({ message: 'Internal Server Error', error });
                }
           });
-
           // make admin 
           app.patch("/users/make-admin/:id", verifyToken, verifyAdmin, async (req, res) => {
                try {
@@ -298,7 +297,7 @@ async function run() {
                          message: "Failed to make admin",
                     });
                }
-          })
+          });
           // remove admin
           app.patch("/users/remove-admin/:id", verifyToken, verifyAdmin, async (req, res) => {
                try {
@@ -336,7 +335,57 @@ async function run() {
                          message: "Failed to Remove admin",
                     });
                }
-          })
+          });
+          // users all stats
+          app.get("/user/stats", verifyToken, async (req, res) => {
+               try {
+                    const userId = req.user.uid;
+
+                    // total orders
+                    const totalOrders = await ordersCollection.countDocuments({
+                         userId,
+                         paymentStatus: "paid"
+                    });
+                    // wishlist items
+                    const wishlistItems = await wishlistsCollection.countDocuments({
+                         userId
+                    });
+                    // total spent
+                    const revenueResult = await ordersCollection.aggregate([
+                         {
+                              $match: {
+                                   userId,
+                                   paymentStatus: "paid"
+                              }
+                         },
+                         {
+                              $group: {
+                                   _id: null,
+                                   totalSpent: { $sum: "$totalAmount" }
+                              }
+                         }
+                    ]).toArray();
+
+                    const totalSpent =
+                         revenueResult.length > 0 ? revenueResult[0].totalSpent : 0;
+                    // latest orders
+                    const latestOrders = await ordersCollection
+                         .find({ userId, paymentStatus: "paid" })
+                         .sort({ createdAt: -1 })
+                         .limit(5)
+                         .toArray();
+                    res.send({
+                         totalOrders,
+                         wishlistItems,
+                         totalSpent,
+                         latestOrders
+                    });
+               } catch (err) {
+                    res.status(500).send({
+                         message: "Failed to load user stats"
+                    });
+               }
+          });
           // admin all route 
           app.get("/admin/stats", verifyToken, verifyAdmin, async (req, res) => {
                try {
@@ -493,7 +542,7 @@ async function run() {
                }
 
                res.send({ message: "Added To Cart" })
-          })
+          });
           // get cart data by user
           app.get("/cart", verifyToken, async (req, res) => {
                const userId = req.user.uid;
@@ -755,7 +804,7 @@ async function run() {
                     console.log(err);
                     res.status(500).send({ message: "Payment init failed" });
                }
-          })
+          });
           // payment confirm
           app.post("/confirm-payment", verifyToken, async (req, res) => {
                try {
@@ -828,7 +877,7 @@ async function run() {
                     orders,
                     total
                })
-          })
+          });
           // update order status
           app.patch("/orders/:id", verifyToken, verifyAdmin, async (req, res) => {
 
@@ -842,7 +891,7 @@ async function run() {
                     }
                );
                res.send(result);
-          })
+          });
           // delete order 
           app.delete("/orders/delete/:id", verifyToken, verifyAdmin, async (req, res) => {
                try {
@@ -858,7 +907,7 @@ async function run() {
                } catch (error) {
                     console.log(error);
                }
-          })
+          });
           // ping test
           await client.db("admin").command({ ping: 1 });
           console.log("Ping success 🚀");
