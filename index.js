@@ -386,6 +386,23 @@ async function run() {
                     });
                }
           });
+          // get user orders data 
+          app.get("/user/orders", verifyToken, async (req, res) => {
+               try {
+                    const userId = req.user.uid;
+                    const orders = await ordersCollection
+                         .find({ userId, paymentStatus: "paid", orderStatus: { $in: ["delivered", "processing"] } })
+                         .sort({ createdAt: -1 })
+                         .toArray();
+                    res.send(orders);
+               } catch (err) {
+                    res.status(500).send(
+                         {
+                              message: "Failed to load orders"
+                         }
+                    );
+               }
+          });
           // admin all route 
           app.get("/admin/stats", verifyToken, verifyAdmin, async (req, res) => {
                try {
