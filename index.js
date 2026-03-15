@@ -403,6 +403,22 @@ async function run() {
                     );
                }
           });
+          // Get user 
+          app.get("/user/orders/:id", verifyToken, async (req, res) => {
+               try {
+                    const id = req.params.id;
+                    const order = await ordersCollection.findOne({
+                         _id: new ObjectId(id)
+                    });
+                    if (!order) {
+                         return res.status(404).send({ message: "Order not found" });
+                    }
+                    res.send(order);
+
+               } catch (error) {
+                    res.status(500).send({ message: "Server error" });
+               }
+          });
           // admin all route 
           app.get("/admin/stats", verifyToken, verifyAdmin, async (req, res) => {
                try {
