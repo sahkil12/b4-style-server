@@ -455,11 +455,11 @@ async function run() {
                          revenueResult.length > 0
                               ? revenueResult[0].totalRevenue
                               : 0;
-                    // latest 5 orders
+                    // latest 10 orders
                     const latestOrders = await ordersCollection
                          .find()
                          .sort({ createdAt: -1 })
-                         .limit(5)
+                         .limit(10)
                          .toArray();
                     // FINAL RESPONSE
                     res.send({
