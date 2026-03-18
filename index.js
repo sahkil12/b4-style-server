@@ -25,7 +25,7 @@ const client = new MongoClient(uri);
 
 async function run() {
      try {
-          await client.connect();
+          // await client.connect();
           const db = client.db("B4_Style");
           const productsCollection = db.collection("products");
           const cartsCollection = db.collection("carts")
@@ -942,8 +942,8 @@ async function run() {
                }
           });
           // ping test
-          await client.db("admin").command({ ping: 1 });
-          console.log("Ping success 🚀");
+          // await client.db("admin").command({ ping: 1 });
+          // console.log("Ping success 🚀");
      } finally {
           // await client.close();
      }
